@@ -1,0 +1,199 @@
+import time, threading, signal, re, os, sys, json, urllib.request
+from pynput.mouse import Controller, Button
+from pynput.keyboard import Listener, Key
+
+# Retrieve variable value if file exists, create new file and add default value if not
+if os.path.exists("click_interval.var"):
+    with open("click_interval.var", "r") as f:
+        click_interval = float(f.read())
+        f.close()
+else:   
+    with open("click_interval.var", "w") as f:
+        f.write("0.01")
+        f.close()
+        click_interval = 0.01
+
+# Variable definitions 
+CONF_KEY = Key.f5
+TOGGLE_KEY = Key.f6
+LICENSE_KEY = Key.f7
+ESCAPE_KEY = Key.f8
+DEBUG_KEY = Key.f9
+
+# Updater configuration
+CURRENT_VERSION = "1.0.0"
+GITHUB_USER = "aallon-pituus"
+REPO_NAME = "CLI-Autoclicker"
+
+# GitHub API endpoints
+LATEST_RELEASE_URL = f"https://api.github.com/repos/{GITHUB_USER}/{REPO_NAME}/releases/latest"
+RAW_SCRIPT_URL = f"https://raw.githubusercontent.com/{GITHUB_USER}/{REPO_NAME}/main/CLI-Autoclicker.py"
+
+# Color code definitions
+RED = "\033[31m"
+LIGHT_RED = "\033[38;5;9m"
+GREEN = "\033[32m"
+YELLOW = "\033[33m"
+ORANGE = "\033[38;5;208m"
+BLUE = "\033[34m"
+MAGENTA = "\033[35m"
+CYAN = "\033[36m"
+BOLD = "\033[1m"
+RESET = "\033[0m"
+
+def check_for_updates():
+    # Checks GitHub for a newer version tag and offers to overwrite the script.
+    global RESET, GREEN, RED, ORANGE
+    print(f"{GREEN}[UPDATER]{RESET} Checking for updates...")
+    
+    req = urllib.request.Request(
+        LATEST_RELEASE_URL,
+        headers={"User-Agent": "Mozilla/5.0"}
+    )
+    
+    try:
+        with urllib.request.urlopen(req, timeout=5) as response:
+            if response.status == 200:
+                data = json.loads(response.read().decode())
+                latest_version = data.get("tag_name", "").lstrip("v")
+                
+                if latest_version and latest_version != CURRENT_VERSION:
+                    print(f"\n{GREEN}[UPDATER]{RESET} New version available: {GREEN}v{latest_version}{RESET} (Current: {GREEN}v{CURRENT_VERSION}{RESET})")
+                    choice = input(f"\n{GREEN}[UPDATER]{RESET} Would you like to update now? (y/n) {ORANGE}>>{RESET} ").strip().lower()
+                    
+                    if choice == "y":
+                        perform_update()
+                else:
+                    print(f"\n{GREEN}[UPDATER]{RESET} You are running the latest version ({GREEN}v{CURRENT_VERSION}{RESET}).")
+                    
+    except Exception as e:
+        # Tell the user if offline / repo has no releases yet
+        print(f"\n{RED}[ERROR]{RESET} Could not check for updates ({e})")
+
+def perform_update():
+    # Downloads the latest script and overwrites the active file.
+    global RESET, GREEN
+    try:
+        print(f"\n{GREEN}[UPDATER]{RESET} Downloading update...")
+        req = urllib.request.Request(
+            RAW_SCRIPT_URL,
+            headers={"User-Agent": "Mozilla/5.0"}
+        )
+        
+        with urllib.request.urlopen(req, timeout=10) as response:
+            new_code = response.read()
+
+        # Identify current running file path
+        current_file_path = os.path.abspath(sys.argv[0])
+        
+        # Overwrite current file with downloaded code
+        with open(current_file_path, "wb") as f:
+            f.write(new_code)
+
+        print(f"\n{GREEN}[UPDATER]{RESET} Update complete! Please restart the autoclicker.")
+        sys.exit(0)
+
+    except Exception as e:
+        print(f"\n{RED}[ERROR]{RESET} Update failed ({e})")
+
+print(rf"""{ORANGE}
+        (     (                                                                 
+   (    )\ )  )\ )     (               )           (              )             
+   )\  (()/( (()/(     )\       (   ( /(           )\ (        ( /(    (   (    
+ (((_)  /(_)) /(_)) ((((_)(    ))\  )\()) (    (  ((_))\   (   )\())  ))\  )(   
+ )\___ (_))  (_))    )\ _ )\  /((_)(_))/  )\   )\  _ ((_)  )\ ((_)\  /((_)(()\  
+((/ __|| |   |_ _|   (_)_\(_)(_))( | |_  ((_) ((_)| | (_) ((_)| |(_)(_))   ((_) 
+ | (__ | |__  | |     / _ \  | || ||  _|/ _ \/ _| | | | |/ _| | / / / -_) | '_| 
+  \___||____||___|   /_/ \_\  \_,_| \__|\___/\__| |_| |_|\__| |_\_\ \___| |_|   {RESET}
+                                                                                   
+CLI Autoclicker by {LIGHT_RED}aallon-pituus{RESET} (on Github). Programmed in Python. {GREEN}{BOLD}Version 1.0.0.{RESET} 
+
+Do not manually edit the variable file (click_interval.var) as the program is running.
+""")
+
+check_for_updates()
+
+print(f"""
+Use the {LIGHT_RED}F5{RESET} key to {LIGHT_RED}configure the click interval variable{RESET}.
+Use the {GREEN}F6{RESET} key to {GREEN}start the auto-clicker{RESET}.
+Use the {ORANGE}F7{RESET} key to {ORANGE}read the license{RESET}.
+Use the {CYAN}F8{RESET} key to {CYAN}close the program{RESET}.
+""")
+
+
+
+clicking = False
+mouse = Controller()
+
+def clicker():
+    global click_interval
+    while True:
+        if clicking:
+            mouse.click(Button.left, 1)
+        time.sleep(click_interval)
+
+def toggle_event(key):
+    global clicking, click_interval, RESET, GREEN, LIGHT_RED, RED, ORANGE
+
+    if key == CONF_KEY:
+        while True:
+            val = input(f"\n{LIGHT_RED}[CONF]{RESET} Enter new click interval (numbers and . only) {ORANGE}>>{RESET} ")
+            pattern = r"^\d+(\.\d+)?$"
+            if re.match(pattern, val) and float(val) > 0:
+                click_interval = float(val)
+                break
+            print(f"\n{LIGHT_RED}[CONF]{RESET} Invalid input. Try again.")
+
+        # Save to file
+        with open("click_interval.var", "w") as f:
+            f.write(str(click_interval))
+            f.close()
+        print(f"\n{LIGHT_RED}[CONF]{RESET} Click interval updated to {click_interval}s.\n")
+
+    if key == TOGGLE_KEY:
+        clicking = not clicking
+        clicking_string = f"{GREEN}Yes.{RESET}" if clicking else f"{RED}No.{RESET}"
+        print(f"Clicking enabled? {clicking_string}")
+    if key == LICENSE_KEY:
+            print(r"""
+            MIT License
+
+Copyright (c) 2026 aallon-pituus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE. 
+""")
+    if key == DEBUG_KEY:
+        print(f"\n[Debug] Click interval: {click_interval}")
+    if key == ESCAPE_KEY:
+        os.kill(os.getpid(), signal.SIGINT)
+
+# Start mouse thread
+click_thread = threading.Thread(target=clicker, daemon=True)
+click_thread.start()
+
+# Start keyboard listener non-blocking
+listener = Listener(on_press=toggle_event)
+listener.start()
+
+# Keep main thread responsive to Ctrl+C signal
+try:
+    while True:
+        time.sleep(1)
+except KeyboardInterrupt:
+    print("\nExiting autoclicker...")
