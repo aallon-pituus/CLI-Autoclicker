@@ -2,6 +2,18 @@ import time, threading, signal, re, os, sys, json, urllib.request
 from pynput.mouse import Controller, Button
 from pynput.keyboard import Listener, Key
 
+# Color code definitions
+RED = "\033[31m"
+LIGHT_RED = "\033[38;5;9m"
+GREEN = "\033[32m"
+YELLOW = "\033[33m"
+ORANGE = "\033[38;5;208m"
+BLUE = "\033[34m"
+MAGENTA = "\033[35m"
+CYAN = "\033[36m"
+BOLD = "\033[1m"
+RESET = "\033[0m"
+
 # Retrieve variable value if file exists, create new file and add default value if not
 if os.path.exists("click_interval.var"):
     with open("click_interval.var", "r") as f:
@@ -28,18 +40,6 @@ REPO_NAME = "CLI-Autoclicker"
 # GitHub API endpoints
 LATEST_RELEASE_URL = f"https://api.github.com/repos/{GITHUB_USER}/{REPO_NAME}/releases/latest"
 RAW_SCRIPT_URL = f"https://raw.githubusercontent.com/{GITHUB_USER}/{REPO_NAME}/main/CLI-Autoclicker.py"
-
-# Color code definitions
-RED = "\033[31m"
-LIGHT_RED = "\033[38;5;9m"
-GREEN = "\033[32m"
-YELLOW = "\033[33m"
-ORANGE = "\033[38;5;208m"
-BLUE = "\033[34m"
-MAGENTA = "\033[35m"
-CYAN = "\033[36m"
-BOLD = "\033[1m"
-RESET = "\033[0m"
 
 def check_for_updates():
     # Checks GitHub for a newer version tag and offers to overwrite the script.
@@ -106,7 +106,7 @@ print(rf"""{ORANGE}
  | (__ | |__  | |     / _ \  | || ||  _|/ _ \/ _| | | | |/ _| | / / / -_) | '_| 
   \___||____||___|   /_/ \_\  \_,_| \__|\___/\__| |_| |_|\__| |_\_\ \___| |_|   {RESET}
                                                                                    
-CLI Autoclicker by {LIGHT_RED}aallon-pituus{RESET} (on Github). Programmed in Python. {GREEN}{BOLD}Version 1.0.0.{RESET} 
+CLI Autoclicker by {LIGHT_RED}aallon-pituus{RESET} (on Github). Programmed in Python. {GREEN}{BOLD}Version {CURRENT_VERSION}.{RESET} 
 
 Do not manually edit the variable file (click_interval.var) as the program is running.
 """)
@@ -153,10 +153,10 @@ def toggle_event(key):
     if key == TOGGLE_KEY:
         clicking = not clicking
         clicking_string = f"{GREEN}Yes.{RESET}" if clicking else f"{RED}No.{RESET}"
-        print(f"Clicking enabled? {clicking_string}")
+        print(f"{GREEN}[CLICKER]{RESET} Clicking enabled? {clicking_string}")
     if key == LICENSE_KEY:
-            print(r"""
-            MIT License
+            print(rf"""
+            {ORANGE}MIT License{RESET}
 
 Copyright (c) 2026 aallon-pituus
 
@@ -179,8 +179,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. 
 """)
     if key == DEBUG_KEY:
-        print(f"\n[Debug] Click interval: {click_interval}")
+        print(f"\n{RED}[Debug]{RESET} Click interval: {click_interval}")
     if key == ESCAPE_KEY:
+        print(f"\n{CYAN}[INTERRUPT]{RESET} Exiting autoclicker...")
         os.kill(os.getpid(), signal.SIGINT)
 
 # Start mouse thread
@@ -196,4 +197,4 @@ try:
     while True:
         time.sleep(1)
 except KeyboardInterrupt:
-    print("\nExiting autoclicker...")
+    print(f"\n{CYAN}[INTERRUPT]{RESET} Exiting autoclicker...")
