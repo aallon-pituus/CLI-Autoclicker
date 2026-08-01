@@ -25,11 +25,9 @@ RESET = "\033[0m"
 if os.path.exists("click_interval.var"):
     with open("click_interval.var", "r") as f:
         click_interval = float(f.read())
-        f.close()
 else:   
     with open("click_interval.var", "w") as f:
         f.write("0.01")
-        f.close()
         click_interval = 0.01
 
 # Variable definitions 
@@ -41,7 +39,7 @@ DEBUG_KEY = Key.f9
 CLEAR_KEY = Key.f10
 
 # Updater configuration
-CURRENT_VERSION = "1.0.1"
+CURRENT_VERSION = "1.0.2"
 GITHUB_USER = "aallon-pituus"
 REPO_NAME = "CLI-Autoclicker"
 
@@ -148,6 +146,7 @@ def toggle_event(key):
     global clicking, click_interval
 
     if key == CONF_KEY:
+        clicking = False
         while True:
             val = input(f"\n{LIGHT_RED}[CONF]{RESET} Enter new click interval (numbers and . only) {ORANGE}>>{RESET} ")
             pattern = r"^\d+(\.\d+)?$"
@@ -159,7 +158,6 @@ def toggle_event(key):
         # Save to file
         with open("click_interval.var", "w") as f:
             f.write(str(click_interval))
-            f.close()
         print(f"\n{LIGHT_RED}[CONF]{RESET} Click interval updated to {click_interval}s.\n")
 
     if key == TOGGLE_KEY:
