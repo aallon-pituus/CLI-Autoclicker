@@ -9,7 +9,7 @@ It comes with:
 - A system-wide key check to allow you to easily turn your autoclicker off and on
 
 # How to use?
-1. Install [Python](python.org/downloads) onto your device.
+1. Install [Python](https://python.org/downloads) onto your device.
 2. Install the `pynput` module (As an example, via PIP with: `pip install pynput` or `python -m pip install pynput`).
 3. **Make sure that** the directory you run the script in allows the script to read and write files.
 4. Run the script (e.g. `python CLI-Autoclicker.py`).
