@@ -65,6 +65,7 @@ def check_for_updates():
                 
                 if latest_version and latest_version != CURRENT_VERSION:
                     print(f"\n{GREEN}[UPDATER]{RESET} New version available: {GREEN}v{latest_version}{RESET} (Current: {GREEN}v{CURRENT_VERSION}{RESET})")
+                    print(f"\n{GREEN}[UPDATER]{RESET} Read the full release notes at: https://github.com/{GITHUB_USER}/{REPO_NAME}/releases/latest")
                     choice = input(f"\n{GREEN}[UPDATER]{RESET} Would you like to update now? (y/n) {ORANGE}>>{RESET} ").strip().lower()
                     
                     if choice == "y":
