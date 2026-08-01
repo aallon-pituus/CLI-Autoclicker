@@ -2,6 +2,11 @@ import time, threading, signal, re, os, sys, json, urllib.request
 from pynput.mouse import Controller, Button
 from pynput.keyboard import Listener, Key
 
+# Function to clear the screen
+def clear_screen():
+    # 'nt' is Windows; 'posix' covers Linux, macOS, Unix
+    os.system("cls" if os.name == "nt" else "clear")
+
 # Color code definitions
 RED = "\033[31m"
 LIGHT_RED = "\033[38;5;9m"
@@ -12,6 +17,8 @@ BLUE = "\033[34m"
 MAGENTA = "\033[35m"
 CYAN = "\033[36m"
 BOLD = "\033[1m"
+LIGHT_GREEN = "\033[92m"
+LIGHT_MAGENTA = "\033[95m"
 RESET = "\033[0m"
 
 # Retrieve variable value if file exists, create new file and add default value if not
@@ -31,9 +38,10 @@ TOGGLE_KEY = Key.f6
 LICENSE_KEY = Key.f7
 ESCAPE_KEY = Key.f8
 DEBUG_KEY = Key.f9
+CLEAR_KEY = Key.f10
 
 # Updater configuration
-CURRENT_VERSION = "1.0.0"
+CURRENT_VERSION = "1.0.1"
 GITHUB_USER = "aallon-pituus"
 REPO_NAME = "CLI-Autoclicker"
 
@@ -96,7 +104,8 @@ def perform_update():
     except Exception as e:
         print(f"\n{RED}[ERROR]{RESET} Update failed ({e})")
 
-print(rf"""{ORANGE}
+def print_header(): 
+    print(rf"""{ORANGE}
         (     (                                                                 
    (    )\ )  )\ )     (               )           (              )             
    )\  (()/( (()/(     )\       (   ( /(           )\ (        ( /(    (   (    
@@ -111,16 +120,19 @@ CLI Autoclicker by {LIGHT_RED}aallon-pituus{RESET} (on Github). Programmed in Py
 Do not manually edit the variable file (click_interval.var) as the program is running.
 """)
 
-check_for_updates()
-
-print(f"""
+def print_instructions():
+    print(f"""
 Use the {LIGHT_RED}F5{RESET} key to {LIGHT_RED}configure the click interval variable{RESET}.
-Use the {GREEN}F6{RESET} key to {GREEN}start the auto-clicker{RESET}.
+Use the {LIGHT_GREEN}F6{RESET} key to {LIGHT_GREEN}start the auto-clicker{RESET}.
 Use the {ORANGE}F7{RESET} key to {ORANGE}read the license{RESET}.
 Use the {CYAN}F8{RESET} key to {CYAN}close the program{RESET}.
+Use the {RED}F9{RESET} key to {RED}show the value of the click interval variable{RESET}.
+Use the {LIGHT_MAGENTA}F10{RESET} key to {LIGHT_MAGENTA}clear the REPL{RESET}.
 """)
 
-
+print_header()
+check_for_updates()
+print_instructions()
 
 clicking = False
 mouse = Controller()
@@ -133,7 +145,7 @@ def clicker():
         time.sleep(click_interval)
 
 def toggle_event(key):
-    global clicking, click_interval, RESET, GREEN, LIGHT_RED, RED, ORANGE
+    global clicking, click_interval
 
     if key == CONF_KEY:
         while True:
@@ -153,7 +165,7 @@ def toggle_event(key):
     if key == TOGGLE_KEY:
         clicking = not clicking
         clicking_string = f"{GREEN}Yes.{RESET}" if clicking else f"{RED}No.{RESET}"
-        print(f"{GREEN}[CLICKER]{RESET} Clicking enabled? {clicking_string}")
+        print(f"{LIGHT_GREEN}[CLICKER]{RESET} Clicking enabled? {clicking_string}")
     if key == LICENSE_KEY:
             print(rf"""
             {ORANGE}MIT License{RESET}
@@ -179,10 +191,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. 
 """)
     if key == DEBUG_KEY:
-        print(f"\n{RED}[Debug]{RESET} Click interval: {click_interval}")
+        print(f"\n{RED}[DEBUG]{RESET} Click interval: {click_interval}\n")
     if key == ESCAPE_KEY:
         print(f"\n{CYAN}[INTERRUPT]{RESET} Exiting autoclicker...")
         os.kill(os.getpid(), signal.SIGINT)
+    if key == CLEAR_KEY:
+        clear_screen()
+        print_header()
+        print_instructions()
 
 # Start mouse thread
 click_thread = threading.Thread(target=clicker, daemon=True)
