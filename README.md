@@ -16,4 +16,4 @@ It comes with:
 5. Enjoy! :)
 
 # Contributing
-Please agree to the ICLA (in the [CLA.md](./CLA.md) file when you contribute.
+Please agree to the ICLA (in the [CLA.md](./CLA.md) file) when you contribute.
