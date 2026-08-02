@@ -14,3 +14,6 @@ It comes with:
 3. **Make sure that** the directory you run the script in allows the script to read and write files.
 4. Run the script (e.g. `python CLI-Autoclicker.py`).
 5. Enjoy! :)
+
+# Contributing
+Please agree to the ICLA (in the [CLA.md](./CLA.md) file when you contribute.
