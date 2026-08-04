@@ -30,9 +30,20 @@ else:
         f.write("0.01")
         click_interval = 0.01
 
+# Retrieve variable value if file exists, create new file and add default value if not
+if os.path.exists("key_interval.var"):
+    with open("key_interval.var", "r") as f:
+        key_interval = float(f.read())
+else:   
+    with open("key_interval.var", "w") as f:
+        f.write("0.01")
+        key_interval = 0.01
+
 # Variable definitions 
-CONF_KEY = Key.f5
-TOGGLE_KEY = Key.f6
+KI_CONF_KEY = Key.f3
+AUTOKEY_KEY = Key.f4
+CI_CONF_KEY = Key.f5
+AUTOCLICK_KEY = Key.f6
 LICENSE_KEY = Key.f7
 ESCAPE_KEY = Key.f8
 DEBUG_KEY = Key.f9
@@ -121,6 +132,8 @@ Do not manually edit the variable file (click_interval.var) as the program is ru
 
 def print_instructions():
     print(f"""
+Use the {BLUE}F3{RESET} key to {BLUE}configure the key interval variable{RESET}.
+Use the {YELLOW}F4{RESET} key to {YELLOW}start the automatic key presser{RESET}.
 Use the {LIGHT_RED}F5{RESET} key to {LIGHT_RED}configure the click interval variable{RESET}.
 Use the {LIGHT_GREEN}F6{RESET} key to {LIGHT_GREEN}start the auto-clicker{RESET}.
 Use the {ORANGE}F7{RESET} key to {ORANGE}read the license{RESET}.
@@ -134,6 +147,8 @@ check_for_updates()
 print_instructions()
 
 clicking = False
+auto_pressing = False
+keyboard = Controller()
 mouse = Controller()
 
 def clicker():
@@ -143,10 +158,37 @@ def clicker():
             mouse.click(Button.left, 1)
         time.sleep(click_interval)
 
-def toggle_event(key):
-    global clicking, click_interval
+def key_presser():
+    global key_interval
+    while True:
+        if auto_pressing:
+            keyboard.press('e')
+            keyboard.release('e')
+        time.sleep(key_interval)
+            
 
-    if key == CONF_KEY:
+def toggle_event(key):
+    global clicking, click_interval, auto_pressing, key_interval
+    if key == AUTOKEY_KEY:
+        auto_pressing = not auto_pressing
+        auto_pressing_string = f"{GREEN}Yes.{RESET}" if clicking else f"{RED}No.{RESET}"
+        print(f"{YELLOW}[AUTO PRESSER]{RESET} Automatic key pressing enabled? {auto_pressing_string}")
+    if key == KI_CONF_KEY:
+        auto_pressing = False
+        while True:
+            val = input(f"\n{LIGHT_RED}[CONF]{RESET} Enter new key interval (numbers and . only) {ORANGE}>>{RESET} ")
+            pattern = r"^\d+(\.\d+)?$"
+            if re.match(pattern, val) and float(val) > 0:
+                key_interval = float(val)
+                break
+            print(f"\n{LIGHT_RED}[CONF]{RESET} Invalid input. Try again.")
+  
+        # Save to file
+        with open("key_interval.var", "w") as f:
+            f.write(str(key_interval))
+        print(f"\n{LIGHT_RED}[CONF]{RESET} Key interval updated to {key_interval}s.\n")
+
+    if key == CI_CONF_KEY:
         clicking = False
         while True:
             val = input(f"\n{LIGHT_RED}[CONF]{RESET} Enter new click interval (numbers and . only) {ORANGE}>>{RESET} ")
@@ -161,7 +203,7 @@ def toggle_event(key):
             f.write(str(click_interval))
         print(f"\n{LIGHT_RED}[CONF]{RESET} Click interval updated to {click_interval}s.\n")
 
-    if key == TOGGLE_KEY:
+    if key == AUTOCLICK_KEY:
         clicking = not clicking
         clicking_string = f"{GREEN}Yes.{RESET}" if clicking else f"{RED}No.{RESET}"
         print(f"{LIGHT_GREEN}[CLICKER]{RESET} Clicking enabled? {clicking_string}")
@@ -202,6 +244,10 @@ SOFTWARE.
 # Start mouse thread
 click_thread = threading.Thread(target=clicker, daemon=True)
 click_thread.start()
+
+# Start key presser thread
+key_thread = threading.Thread(target=key_presser, daemon=True)
+key_thread.start()
 
 # Start keyboard listener non-blocking
 listener = Listener(on_press=toggle_event)
