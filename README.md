@@ -15,5 +15,6 @@ It comes with:
 4. Run the script (e.g. `python CLI-Autoclicker.py`).
 5. Enjoy! :)
 
-# Contributing
-Please agree to the ICLA (in the [CLA.md](./CLA.md) file) when you contribute.
+# Contributors
+- aallon-pituus
+- viher-valo
