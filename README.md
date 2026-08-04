@@ -5,8 +5,9 @@ A simple command line interface autoclicker Python script.
 
 It comes with:
 - An automatic update checker
-- Simple REPL that allows you to change the click interval variable on the go
+- Simple REPL that allows you to configure on the go
 - A system-wide key check to allow you to easily turn your autoclicker off and on
+- An automatic key presser
 
 # How to use?
 1. Install [Python](https://python.org/downloads) onto your device.
