@@ -1,11 +1,26 @@
 import time, threading, signal, re, os, sys, json, urllib.request
-from pynput.mouse import Controller, Button
-from pynput.keyboard import Listener, Key
+from pynput.mouse import Controller as MouseController, Button
+from pynput.keyboard import Controller as KeyboardController, Listener, Key
 
 # Function to clear the screen
 def clear_screen():
-    # 'nt' is Windows; 'posix' covers Linux, macOS, Unix
+    # 'nt' is Windows; if not nt, Unix command
     os.system("cls" if os.name == "nt" else "clear")
+
+def format_key_name(key):
+    # Converts a pynput key object into a printable/storable string. 
+    if hasattr(key, 'char') and key.char is not None:
+        return key.char
+    elif hasattr(key, 'name'):
+        return f"Key.{key.name}"
+    return str(key)
+
+def parse_key_name(key_str):
+    # Converts a stored key string back into a character or Key object.
+    if key_str.startswith("Key."):
+        attr = key_str.split(".")[1]
+        return getattr(Key, attr, key_str)
+    return key_str
 
 # Color code definitions
 RED = "\033[31m"
@@ -14,6 +29,7 @@ GREEN = "\033[32m"
 YELLOW = "\033[33m"
 ORANGE = "\033[38;5;208m"
 BLUE = "\033[34m"
+PINK = "\033[38;5;198m"
 MAGENTA = "\033[35m"
 CYAN = "\033[36m"
 BOLD = "\033[1m"
@@ -30,17 +46,24 @@ else:
         f.write("0.01")
         click_interval = 0.01
 
-# Retrieve variable value if file exists, create new file and add default value if not
-if os.path.exists("key_interval.var"):
-    with open("key_interval.var", "r") as f:
-        key_interval = float(f.read())
+# Retrieve key character and interval if file exists, create default if not
+if os.path.exists("key_values.conf"):
+    with open("key_values.conf", "r") as f:
+        content = f.read().strip().split()
+        if len(content) == 2:
+            key_to_press = parse_key_name(content[0])
+            key_interval = float(content[1])
+        else:
+            key_to_press = 'e'
+            key_interval = 0.01
 else:   
-    with open("key_interval.var", "w") as f:
-        f.write("0.01")
+    with open("key_values.conf", "w") as f:
+        f.write("e 0.01")
+        key_to_press = 'e'
         key_interval = 0.01
 
 # Variable definitions 
-KI_CONF_KEY = Key.f3
+KEY_CONF_KEY = Key.f3
 AUTOKEY_KEY = Key.f4
 CI_CONF_KEY = Key.f5
 AUTOCLICK_KEY = Key.f6
@@ -50,13 +73,13 @@ DEBUG_KEY = Key.f9
 CLEAR_KEY = Key.f10
 
 # Updater configuration
-CURRENT_VERSION = "1.0.2"
+CURRENT_VERSION = "1.1.0"
 GITHUB_USER = "aallon-pituus"
 REPO_NAME = "CLI-Autoclicker"
 
 # GitHub API endpoints
 LATEST_RELEASE_URL = f"https://api.github.com/repos/{GITHUB_USER}/{REPO_NAME}/releases/latest"
-RAW_SCRIPT_URL = f"https://raw.githubusercontent.com/{GITHUB_USER}/{REPO_NAME}/main/CLI-Autoclicker.py"
+RAW_SCRIPT_URL = f"https://github.com/{GITHUB_USER}/{REPO_NAME}/releases/latest/download/CLI-Autoclicker.py"
 
 def check_for_updates():
     # Checks GitHub for a newer version tag and offers to overwrite the script.
@@ -125,20 +148,20 @@ def print_header():
  | (__ | |__  | |     / _ \  | || ||  _|/ _ \/ _| | | | |/ _| | / / / -_) | '_| 
   \___||____||___|   /_/ \_\  \_,_| \__|\___/\__| |_| |_|\__| |_\_\ \___| |_|   {RESET}
                                                                                    
-CLI Autoclicker by {LIGHT_RED}aallon-pituus{RESET} (on Github). Programmed in Python. {GREEN}{BOLD}Version {CURRENT_VERSION}.{RESET} 
+CLI Autoclicker. Programmed in Python. {GREEN}Version {CURRENT_VERSION}.{RESET} 
 
-Do not manually edit the variable file (click_interval.var) as the program is running.
+Do not manually edit the variable files (click_interval.var, key_values.conf) as the program is running.
 """)
 
 def print_instructions():
     print(f"""
-Use the {BLUE}F3{RESET} key to {BLUE}configure the key interval variable{RESET}.
+Use the {PINK}F3{RESET} key to {PINK}configure the key interval variable{RESET}.
 Use the {YELLOW}F4{RESET} key to {YELLOW}start the automatic key presser{RESET}.
 Use the {LIGHT_RED}F5{RESET} key to {LIGHT_RED}configure the click interval variable{RESET}.
 Use the {LIGHT_GREEN}F6{RESET} key to {LIGHT_GREEN}start the auto-clicker{RESET}.
-Use the {ORANGE}F7{RESET} key to {ORANGE}read the license{RESET}.
+Use the {ORANGE}F7{RESET} key to {ORANGE}read the credits{RESET}.
 Use the {CYAN}F8{RESET} key to {CYAN}close the program{RESET}.
-Use the {RED}F9{RESET} key to {RED}show the value of the click interval variable{RESET}.
+Use the {RED}F9{RESET} key to {RED}show the values of the variables{RESET}.
 Use the {LIGHT_MAGENTA}F10{RESET} key to {LIGHT_MAGENTA}clear the REPL{RESET}.
 """)
 
@@ -146,15 +169,15 @@ print_header()
 check_for_updates()
 print_instructions()
 
-clicking = False
+auto_clicking = False
 auto_pressing = False
-keyboard = Controller()
-mouse = Controller()
+keyboard = KeyboardController()
+mouse = MouseController()
 
 def clicker():
     global click_interval
     while True:
-        if clicking:
+        if auto_clicking:
             mouse.click(Button.left, 1)
         time.sleep(click_interval)
 
@@ -162,34 +185,52 @@ def key_presser():
     global key_interval
     while True:
         if auto_pressing:
-            keyboard.press('e')
-            keyboard.release('e')
+            keyboard.press(key_to_press)
+            keyboard.release(key_to_press)
         time.sleep(key_interval)
             
 
 def toggle_event(key):
-    global clicking, click_interval, auto_pressing, key_interval
+    global auto_clicking, click_interval, auto_pressing, key_interval, key_to_press
     if key == AUTOKEY_KEY:
         auto_pressing = not auto_pressing
-        auto_pressing_string = f"{GREEN}Yes.{RESET}" if clicking else f"{RED}No.{RESET}"
+        auto_pressing_string = f"{GREEN}Yes.{RESET}" if auto_pressing else f"{RED}No.{RESET}"
         print(f"{YELLOW}[AUTO PRESSER]{RESET} Automatic key pressing enabled? {auto_pressing_string}")
-    if key == KI_CONF_KEY:
+    if key == KEY_CONF_KEY:
         auto_pressing = False
+        auto_clicking = False
+        print(f"\n{PINK}[CONF]{RESET} Press ANY key on your keyboard to set as auto-key...")
+
+        captured_key = [None]
+
+        def on_single_press(k):
+            captured_key[0] = k
+            return False  # Stops the listener on first keypress
+
+        with Listener(on_press=on_single_press) as temp_listener:
+            temp_listener.join()
+
+        key_to_press = captured_key[0]
+        key_str = format_key_name(key_to_press)
+
+        print(f"\n{PINK}[CONF]{RESET} Captured key: {key_str}")
+
         while True:
-            val = input(f"\n{LIGHT_RED}[CONF]{RESET} Enter new key interval (numbers and . only) {ORANGE}>>{RESET} ")
+            val = input(f"\n{PINK}[CONF]{RESET} Enter new key interval (numbers and . only) {ORANGE}>>{RESET} ")
             pattern = r"^\d+(\.\d+)?$"
             if re.match(pattern, val) and float(val) > 0:
                 key_interval = float(val)
                 break
-            print(f"\n{LIGHT_RED}[CONF]{RESET} Invalid input. Try again.")
+            print(f"\n{PINK}[CONF]{RESET} Invalid input. Try again.")
   
         # Save to file
-        with open("key_interval.var", "w") as f:
-            f.write(str(key_interval))
-        print(f"\n{LIGHT_RED}[CONF]{RESET} Key interval updated to {key_interval}s.\n")
+        with open("key_values.conf", "w") as f:
+            f.write(f"{key_str} {key_interval}")
+        print(f"\n{PINK}[CONF]{RESET} Updated the key to press to '{key_str}' with {key_interval}s interval.\n")
 
     if key == CI_CONF_KEY:
-        clicking = False
+        auto_pressing = False
+        auto_clicking = False
         while True:
             val = input(f"\n{LIGHT_RED}[CONF]{RESET} Enter new click interval (numbers and . only) {ORANGE}>>{RESET} ")
             pattern = r"^\d+(\.\d+)?$"
@@ -204,11 +245,15 @@ def toggle_event(key):
         print(f"\n{LIGHT_RED}[CONF]{RESET} Click interval updated to {click_interval}s.\n")
 
     if key == AUTOCLICK_KEY:
-        clicking = not clicking
-        clicking_string = f"{GREEN}Yes.{RESET}" if clicking else f"{RED}No.{RESET}"
+        auto_clicking = not auto_clicking
+        clicking_string = f"{GREEN}Yes.{RESET}" if auto_clicking else f"{RED}No.{RESET}"
         print(f"{LIGHT_GREEN}[CLICKER]{RESET} Clicking enabled? {clicking_string}")
     if key == LICENSE_KEY:
             print(rf"""
+            {ORANGE}=== Contributors ==={RESET}
+                aallon-pituus
+                viher-valo
+
             {ORANGE}MIT License{RESET}
 
 Copyright (c) 2026 aallon-pituus
@@ -232,6 +277,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. 
 """)
     if key == DEBUG_KEY:
+        print(f"\n{RED}[DEBUG]{RESET} Key to press: {key_to_press}\n")
+        print(f"\n{RED}[DEBUG]{RESET} Key interval: {key_interval}\n")
         print(f"\n{RED}[DEBUG]{RESET} Click interval: {click_interval}\n")
     if key == ESCAPE_KEY:
         print(f"\n{CYAN}[INTERRUPT]{RESET} Exiting autoclicker...")
