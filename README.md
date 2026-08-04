@@ -16,5 +16,5 @@ It comes with:
 5. Enjoy! :)
 
 # Contributors
-aallon-pituus
-viher-valo
+- aallon-pituus
+- viher-valo
